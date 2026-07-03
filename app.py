@@ -28,27 +28,21 @@ BACKGROUND_FILENAME = "outfit.png"
 ICON_SIZE = (95, 95)
 
 # PERFECT CHARACTER SIZE
-CHARACTER_RENDER_SIZE = (700, 700)
+CHARACTER_RENDER_SIZE = (750, 750)
 
-# ================= POSITIONS (FIXED) =================
-
+# ================= POSITIONS (FIXED FOR 8 HEXAGONS) =================
+# Perfectly mapped to a symmetrical zigzag grid: Left column (Mask, Emote, Pet, Weapon) 
+# and Right column (Shirt, Pants, Armor, Shoes)
 HEX_POSITIONS = {
-    # Top-Left: Mask / Head
-    "mask":   (190, 90),
-    # Top-Right: Shirt / Jacket
-    "shirt":  (840, 90),
-    # Bottom-Left: Pants
-    "pants":  (40, 420),
-    # Bottom-Right: Shoes
-    "shoes":  (990, 420),
-    # Mid-Left: Emote
-    "emote":  (40, 230),
-    # Mid-Right: Armor
-    "armor":  (990, 230),
-    # Bottom-Left-lower: Weapon
-    "weapon": (190, 560),
-    # Bottom-Right-lower: Pet
-    "pet":    (840, 560)
+    "mask":   (190, 100),  # Top-Left
+    "emote":  (40, 240),   # Mid-Left 1
+    "pet":    (190, 390),  # Mid-Left 2
+    "weapon": (40, 580),   # Bottom-Left
+
+    "shirt":  (830, 100),  # Top-Right
+    "pants":  (980, 240),  # Mid-Right 1
+    "armor":  (830, 390),  # Mid-Right 2
+    "shoes":  (980, 580)   # Bottom-Right
 }
 
 # ================= FETCH ICON =================
@@ -165,7 +159,8 @@ def outfit_image():
             else None
         ),
         "pet": data.get("petInfo", {}).get("skinId"),
-        # Added support for equippedAnimationId, falling back to avatarId and DEFAULT_ID
+        
+        # FIXED: Prioritize equippedAnimationId exactly as requested
         "character": profile.get("equippedAnimationId") or profile.get("avatarId") or DEFAULT_ID
     }
 
@@ -188,10 +183,10 @@ def outfit_image():
                 if not icon_img:
                     continue
 
-                # CHARACTER HORIZONTALLY CENTERED, FEET AT BOTTOM
+                # CHARACTER HORIZONTALLY CENTERED, PERFECT STAGE FEET ALIGNMENT
                 w, h = icon_img.size
                 center_x = canvas.width // 2
-                bottom_y = canvas.height - 20
+                bottom_y = canvas.height - 25  # Adjusted ground padding
                 pos = (int(center_x - w // 2), int(bottom_y - h))
 
             # ================= OTHER ITEMS =================
