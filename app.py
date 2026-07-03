@@ -23,7 +23,6 @@ session = requests.Session()
 
 # ================= CONFIG =================
 
-API_KEY = "KRSXH"
 BACKGROUND_FILENAME = "outfit.png"
 
 ICON_SIZE = (95, 95)
@@ -183,18 +182,13 @@ def outfit_image():
             "error": "UID parameter required"
         }), 400
 
-    if key != API_KEY:
-
-        return jsonify({
-            "error": "Invalid API Key"
-        }), 401
-
     # ================= FETCH PLAYER DATA =================
 
     try:
 
+        # UPDATED API ENDPOINT
         api_url = (
-            "https://krsxh-ff-info.vercel.app/"
+            "https://info.killersharmabot.online/"
             f"player-info?uid={uid}"
         )
 
