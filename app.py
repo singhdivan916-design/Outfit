@@ -192,7 +192,7 @@ def outfit_image():
             f"player-info?uid={uid}"
         )
 
-        response = session.get(api_url, timeout=10)
+        response = session.get(api_url, timeout=20)
 
         response.raise_for_status()
 
