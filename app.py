@@ -17,8 +17,6 @@ fallback_ids = [
 ]
 
 DEFAULT_ID = "710034057"
-
-# Default entry animation, matches the reference (male) outfit image.
 DEFAULT_ANIMATION_ID = "912053001"
 
 app = Flask(__name__)
@@ -30,34 +28,33 @@ BACKGROUND_FILENAME = "outfit.png"
 
 ICON_SIZE = (95, 95)
 
-# PERFECT CHARACTER SIZE - bada karo
 CHARACTER_RENDER_SIZE = (700, 700)
 
 # ================= POSITIONS =================
 #
-# FIXED: two pairs were transposed compared to the reference layout.
-#   - "mask"  and "pants" were swapped   -> mask now sits on the LEFT chain,
-#     pants stays on the RIGHT chain (where the mask icon used to render).
-#   - "shoes" and "emote" were swapped   -> facepaint/emote content now sits
-#     on the LEFT chain (row 2), shoes sits on the RIGHT chain (row 1),
-#     matching the male reference image exactly.
-#   - "shirt", "armor", "weapon", "pet" were already correctly positioned.
-#   - Added a new "anim" slot for the entry-animation icon (bottom-right,
-#     between shoes/armor and pet, matching where the dance icon sits in
-#     the reference image).
+# LEFT chain (top → bottom):
+#   shirt  (190,  90)  → head / hair item
+#   shoes  ( 40, 230)  → character face / skin  ← was emote's slot
+#   mask   ( 40, 420)  → face mask              ← was pants's slot
+#   weapon (190, 560)  → weapon skin
+#
+# RIGHT chain (top → bottom):
+#   emote  (840,  90)  → top / shirt            ← was shoes's slot
+#   armor  (990, 230)  → pants / bottom
+#   pants  (990, 420)  → shoes                  ← was mask's slot
+#   anim   (840, 560)  → entry animation        ← replaces pet (removed)
 
 HEX_POSITIONS = {
 
-    "shirt":  (190, 90),    # unchanged - left, row 1 (top)
-    "shoes":  (40, 230),    # was "emote"'s slot - now left, row 2
-    "mask":   (40, 420),    # was "pants"'s slot - now left, row 3
-    "weapon": (190, 560),   # unchanged - left, row 4 (bottom)
+    "shirt":  (190,  90),   # LEFT  row-1 — head / hair
+    "shoes":  ( 40, 230),   # LEFT  row-2 — character face / skin
+    "mask":   ( 40, 420),   # LEFT  row-3 — face mask
+    "weapon": (190, 560),   # LEFT  row-4 — weapon skin
 
-    "emote":  (840, 90),    # was "shoes"'s slot - now right, row 1 (top)
-    "armor":  (990, 230),   # unchanged - right, row 2
-    "pants":  (990, 420),   # was "mask"'s slot - now right, row 3
-    "anim":   (840, 420),   # NEW - entry animation icon, right, row 3 (outer)
-    "pet":    (840, 560),   # unchanged - right, row 4 (bottom)
+    "emote":  (840,  90),   # RIGHT row-1 — top / shirt
+    "armor":  (990, 230),   # RIGHT row-2 — pants / bottom
+    "pants":  (990, 420),   # RIGHT row-3 — shoes
+    "anim":   (840, 560),   # RIGHT row-4 — entry animation (pet REMOVED)
 }
 
 # ================= FETCH ICON =================
@@ -66,7 +63,7 @@ def fetch_icon(icon_id, size=ICON_SIZE, is_character=False):
 
     try:
 
-        # ================= CHARACTER =================
+        # ================= CHARACTER RENDER =================
 
         if is_character:
 
@@ -84,13 +81,11 @@ def fetch_icon(icon_id, size=ICON_SIZE, is_character=False):
                     BytesIO(r.content)
                 ).convert("RGBA")
 
-                # REMOVE TRANSPARENT EMPTY SPACE
                 bbox = img.getbbox()
 
                 if bbox:
                     img = img.crop(bbox)
 
-                # KEEP PERFECT RATIO
                 w, h = img.size
 
                 ratio = min(
@@ -118,7 +113,6 @@ def fetch_icon(icon_id, size=ICON_SIZE, is_character=False):
             ids_to_try.append(str(icon_id))
 
         for fid in fallback_ids:
-
             if fid not in ids_to_try:
                 ids_to_try.append(fid)
 
@@ -156,7 +150,7 @@ def home():
 
     return jsonify({
         "name": "Outfit Image Generator API",
-        "version": "4.1",
+        "version": "5.0",
         "endpoints": {
             "/outfit-image": {
                 "method": "GET, POST",
@@ -202,7 +196,6 @@ def outfit_image():
 
     try:
 
-        # UPDATED API ENDPOINT
         api_url = (
             "https://info.killersharmabot.online/"
             f"player-info?uid={uid}"
@@ -228,13 +221,14 @@ def outfit_image():
 
     # ================= PLAYER DATA =================
 
-    basic = data.get("basicInfo", {})
+    basic   = data.get("basicInfo",   {})
     profile = data.get("profileInfo", {})
 
     clothes = profile.get("clothes") or []
 
     draw_tasks = {
 
+        # clothes[] slots
         "mask":   clothes[0] if len(clothes) > 0 else None,
         "shirt":  clothes[1] if len(clothes) > 1 else None,
         "pants":  clothes[2] if len(clothes) > 2 else None,
@@ -242,29 +236,27 @@ def outfit_image():
         "emote":  clothes[4] if len(clothes) > 4 else None,
         "armor":  clothes[5] if len(clothes) > 5 else None,
 
+        # weapon skin
         "weapon": (
             basic.get("weaponSkinShows", [None])[0]
             if basic.get("weaponSkinShows")
             else None
         ),
 
-        "pet": data.get(
-            "petInfo",
-            {}
-        ).get("skinId"),
-
-        # NEW: entry animation. Falls back to the reference animation
-        # id (912053001) if the API doesn't return one.
+        # entry animation — use player's own ID, default to 912053001
         "anim": (
             profile.get("equippedAnimationId")
             or basic.get("equippedAnimationId")
             or DEFAULT_ANIMATION_ID
         ),
 
+        # main character render (centre of canvas)
         "character": (
             profile.get("avatarId")
             or DEFAULT_ID
-        )
+        ),
+
+        # pet REMOVED
     }
 
     # ================= CHECK TEMPLATE =================
@@ -290,7 +282,7 @@ def outfit_image():
             if not item_id:
                 continue
 
-            # ================= CHARACTER =================
+            # ================= CHARACTER (centre render) =================
 
             if slot == "character":
 
@@ -303,10 +295,9 @@ def outfit_image():
                 if not icon_img:
                     continue
 
-                # CHARACTER HORIZONTALLY CENTERED, FEET AT BOTTOM
                 w, h = icon_img.size
 
-                center_x = canvas.width // 2
+                center_x = canvas.width  // 2
                 bottom_y = canvas.height - 20
 
                 pos = (
@@ -314,7 +305,7 @@ def outfit_image():
                     int(bottom_y - h)
                 )
 
-            # ================= OTHER ITEMS =================
+            # ================= HEX ICONS =================
 
             else:
 
@@ -363,33 +354,17 @@ def outfit_image():
 
 @app.errorhandler(404)
 def not_found(error):
-
-    return jsonify({
-        "error": "Endpoint not found"
-    }), 404
+    return jsonify({"error": "Endpoint not found"}), 404
 
 @app.errorhandler(500)
 def internal_error(error):
-
-    return jsonify({
-        "error": "Internal server error"
-    }), 500
+    return jsonify({"error": "Internal server error"}), 500
 
 # ================= RUN =================
 
 if __name__ == "__main__":
 
-    port = int(
-        os.environ.get("PORT", 5000)
-    )
+    port  = int(os.environ.get("PORT", 5000))
+    debug = os.environ.get("DEBUG", "False").lower() == "true"
 
-    debug = os.environ.get(
-        "DEBUG",
-        "False"
-    ).lower() == "true"
-
-    app.run(
-        host="0.0.0.0",
-        port=port,
-        debug=debug
-    )
+    app.run(host="0.0.0.0", port=port, debug=debug)
